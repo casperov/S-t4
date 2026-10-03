@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#131519" />
+<title>Leek</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="app">
+  <aside class="panel" id="panel">
+
+    <section class="profile">
+      <div class="avatar" id="avatar">
+        <img id="avatar-img" alt="avatar" />
+        <span class="avatar-fallback" id="avatar-fallback">L</span>
+      </div>
+      <h1 class="name">
+        <span id="name-text">Leek</span>
+        <svg class="verified" id="verified" viewBox="0 0 24 24" aria-label="verified" role="img">
+          <path d="M12 1.6l2.4 2.1 3.2-.3 1.2 3 2.9 1.4-.9 3.1.9 3.1-2.9 1.4-1.2 3-3.2-.3L12 20.4l-2.4-2.1-3.2.3-1.2-3L2.3 14.2l.9-3.1-.9-3.1 2.9-1.4 1.2-3 3.2.3z"/>
+          <path class="check" d="M8.1 12.2l2.6 2.6 5.2-5.4"
+                fill="none" stroke="#131519" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </h1>
+      <p class="bio" id="bio"></p>
+    </section>
+
+    <section class="playlist">
+      <header class="section-head">
+        <span>Плейлист</span>
+        <span class="count" id="tracks-count"></span>
+      </header>
+      <ul class="tracks" id="tracks" aria-label="Список треков"></ul>
+    </section>
+
+    <section class="player" id="player" aria-label="Аудиоплеер">
+      <div class="player-head">
+        <div class="player-title" id="np-title">—</div>
+        <div class="player-time">
+          <span id="t-cur">0:00</span>
+          <span class="sep">·</span>
+          <span id="t-dur">0:00</span>
+        </div>
+      </div>
+      <input type="range" class="seek" id="seek" min="0" max="1000" value="0" step="1" aria-label="Позиция" />
+      <div class="player-foot">
+        <div class="controls">
+          <button class="ctl" id="btn-prev" aria-label="Предыдущий трек">
+            <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm12 0v12l-9-6z"/></svg>
+          </button>
+          <button class="ctl ctl-main" id="btn-play" aria-label="Играть">
+            <svg class="ico-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            <svg class="ico-pause" viewBox="0 0 24 24" style="display:none"><path d="M7 5h4v14H7zm6 0h4v14h-4z"/></svg>
+          </button>
+          <button class="ctl" id="btn-next" aria-label="Следующий трек">
+            <svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 6l9 6-9 6z"/></svg>
+          </button>
+        </div>
+        <div class="volume-wrap">
+          <button class="ctl ctl-mini" id="btn-mute" aria-label="Звук">
+            <svg class="ico-vol" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4zm12.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4z"/></svg>
+            <svg class="ico-mute" viewBox="0 0 24 24" style="display:none"><path d="M4 9v6h4l5 4V5L8 9H4zm15.7.3l-1.4-1.4-1.6 1.6-1.6-1.6-1.4 1.4 1.6 1.6-1.6 1.6 1.4 1.4 1.6-1.6 1.6 1.6 1.4-1.4-1.6-1.6z"/></svg>
+          </button>
+          <input type="range" class="volume" id="volume" min="0" max="1" step="0.01" value="0.85" aria-label="Громкость" />
+        </div>
+      </div>
+    </section>
+
+    <nav class="socials" id="socials" aria-label="Соцсети"></nav>
+
+  </aside>
+
+  <main class="stage">
+    <div class="stage-inner">
+      <div class="stage-dot"></div>
+      <span class="stage-hint">здесь пока пусто</span>
+    </div>
+  </main>
+</div>
+
+<audio id="audio" preload="metadata"></audio>
+<script src="app.js"></script>
+</body>
+</html>
