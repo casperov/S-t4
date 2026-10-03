@@ -1,11 +1,11 @@
 /* ============================================================
-   CONFIG — правь только здесь
+   CONFIG
    ============================================================ */
 const CONFIG = {
   profile: {
     name: 'Leek',
     bio: 'Дизайнер интерфейсов. Собираю тёмные темы, которые не утомляют глаза.',
-    avatar: 'avatar.jpg',   // положи файл рядом с index.html
+    avatar: 'avatar.jpg',
     verified: true,
     fallbackInitial: 'L',
   },
@@ -18,20 +18,19 @@ const CONFIG = {
   ],
 
   tracks: {
-    folder: 'music',
-    prefix: 'ms',           // ms1.mp3, ms2.mp3, ...
-    ext: 'mp3',
-    max: 50,                // проверяем до ms50.mp3
-    // Переопределение названий (ключ — имя файла):
+    // основной источник — /api/tracks (server.js)
+    apiUrl: '/api/tracks',
+    // резерв — статический манифест (make-manifest.js)
+    manifestUrl: 'music/tracks.json',
+    // ручные переопределения названий: { 'файл.mp3': 'Красивое название' }
     titles: {
-      // 'ms1.mp3': 'Intro',
-      // 'ms2.mp3': 'Night Drive',
+      // 'intro.mp3': 'Intro',
     },
   },
 };
 
 /* ============================================================
-   Иконки соцсетей
+   Иконки
    ============================================================ */
 const ICONS = {
   tg: '<svg viewBox="0 0 24 24"><path d="M21.9 4.3l-3 14.2c-.2 1-.8 1.2-1.7.8l-4.6-3.4-2.2 2.1c-.2.2-.5.5-.9.5l.3-4.6L18.9 6c.4-.3-.1-.5-.6-.2L7.6 12.4l-4.4-1.4c-1-.3-1-1 .2-1.4l17-6.6c.8-.3 1.6.2 1.4 1.3z"/></svg>',
@@ -77,10 +76,9 @@ function renderProfile() {
   els.bio.textContent  = bio;
   els.avatarInit.textContent = fallbackInitial || name.charAt(0).toUpperCase() || '?';
 
-  // аватар: грузим и, если ок, показываем
   const img = new Image();
   img.onload  = () => { els.avatarImg.src = avatar; els.avatar.classList.add('has-img'); };
-  img.onerror = () => { /* остаётся fallback-инициал */ };
+  img.onerror = () => {};
   img.src = avatar;
 
   if (!verified) els.verified.classList.add('hidden');
@@ -96,22 +94,28 @@ function renderSocials() {
 }
 
 /* ============================================================
-   Автодетект треков: ms1.mp3 .. msN.mp3
+   Загрузка списка треков
    ============================================================ */
-async function detectTracks() {
-  const { folder, prefix, ext, max } = CONFIG.tracks;
-  const checks = [];
-  for (let i = 1; i <= max; i++) {
-    const file = `${prefix}${i}.${ext}`;
-    const url  = `${folder}/${file}`;
-    checks.push(
-      fetch(url, { method: 'HEAD', cache: 'no-store' })
-        .then(r => r.ok ? { index: i, file, url } : null)
-        .catch(() => null)
-    );
-  }
-  const res = await Promise.all(checks);
-  return res.filter(Boolean).sort((a, b) => a.index - b.index);
+async function loadTracks() {
+  // 1) /api/tracks (server.js)
+  try {
+    const r = await fetch(CONFIG.tracks.apiUrl, { cache: 'no-store' });
+    if (r.ok) {
+      const data = await r.json();
+      if (Array.isArray(data?.tracks)) return data.tracks;
+    }
+  } catch {}
+
+  // 2) music/tracks.json (make-manifest.js, для чистого статика)
+  try {
+    const r = await fetch(CONFIG.tracks.manifestUrl, { cache: 'no-store' });
+    if (r.ok) {
+      const data = await r.json();
+      if (Array.isArray(data?.tracks)) return data.tracks;
+    }
+  } catch {}
+
+  return [];
 }
 
 /* ============================================================
@@ -120,12 +124,9 @@ async function detectTracks() {
 const state = {
   tracks: [],
   currentIndex: -1,
-  durations: new Map(),   // url -> seconds
+  durations: new Map(),
 };
 
-/* ============================================================
-   Рендер списка треков
-   ============================================================ */
 function fmt(sec) {
   if (!Number.isFinite(sec) || sec < 0) return '0:00';
   const m = Math.floor(sec / 60);
@@ -136,26 +137,34 @@ function fmt(sec) {
 function trackTitle(track) {
   const custom = CONFIG.tracks.titles?.[track.file];
   if (custom) return custom;
-  return `Трек ${String(track.index).padStart(2, '0')}`;
+  return track.title || track.file;
 }
 
+function trackSubtitle(track) {
+  if (track.artist) return track.artist;
+  return track.ext ? track.ext.toUpperCase() : '';
+}
+
+/* ============================================================
+   Рендер списка
+   ============================================================ */
 function renderTracks() {
   if (!state.tracks.length) {
     els.tracks.innerHTML = `
       <div class="tracks-empty">
         Треки не найдены.<br/>
-        Положи файлы <code>ms1.mp3</code>, <code>ms2.mp3</code>, … в папку <code>music/</code>.
+        Положи любые <code>.mp3</code>, <code>.m4a</code>, <code>.flac</code>, <code>.wav</code>, <code>.ogg</code>, <code>.opus</code> в папку <code>music/</code> и обнови страницу.
       </div>`;
     els.tracksCount.textContent = '';
     return;
   }
-  els.tracksCount.textContent = `${state.tracks.length}`;
+  els.tracksCount.textContent = String(state.tracks.length);
   els.tracks.innerHTML = state.tracks.map((t, i) => `
     <li class="track" data-i="${i}">
-      <div class="track-index" data-role="index">${String(t.index).padStart(2, '0')}</div>
+      <div class="track-index" data-role="index">${String(i + 1).padStart(2, '0')}</div>
       <div class="track-meta">
-        <div class="track-title">${trackTitle(t)}</div>
-        <div class="track-sub">${t.file}</div>
+        <div class="track-title" title="${escapeAttr(trackTitle(t))}">${escapeHtml(trackTitle(t))}</div>
+        <div class="track-sub">${escapeHtml(trackSubtitle(t))}</div>
       </div>
       <div class="track-dur" data-role="dur">—:—</div>
     </li>
@@ -168,7 +177,13 @@ function renderTracks() {
   loadDurations();
 }
 
-/* ленивая загрузка длительностей — по одному, чтобы не грузить всё сразу */
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;',
+  }[c]));
+}
+function escapeAttr(s) { return escapeHtml(s); }
+
 function loadDurations() {
   state.tracks.forEach((t, i) => {
     if (state.durations.has(t.url)) return;
@@ -184,7 +199,7 @@ function loadDurations() {
 }
 
 /* ============================================================
-   Индикация активного трека
+   Активный трек
    ============================================================ */
 function paintActive() {
   els.tracks.querySelectorAll('.track').forEach((li, i) => {
@@ -196,13 +211,13 @@ function paintActive() {
     if (active) {
       idxBox.innerHTML = '<div class="eq"><i></i><i></i><i></i><i></i></div>';
     } else {
-      idxBox.textContent = String(state.tracks[i].index).padStart(2, '0');
+      idxBox.textContent = String(i + 1).padStart(2, '0');
     }
   });
 }
 
 /* ============================================================
-   Управление плеером
+   Управление
    ============================================================ */
 function playIndex(i) {
   if (i < 0 || i >= state.tracks.length) return;
@@ -234,12 +249,8 @@ function playNext() {
   playIndex((state.currentIndex + 1) % state.tracks.length);
 }
 
-function updateSeekFill(pct) {
-  els.seek.style.setProperty('--p', `${pct}%`);
-}
-function updateVolFill(v) {
-  els.volume.style.setProperty('--p', `${Math.round(v * 100)}%`);
-}
+function updateSeekFill(pct) { els.seek.style.setProperty('--p', `${pct}%`); }
+function updateVolFill(v)    { els.volume.style.setProperty('--p', `${Math.round(v * 100)}%`); }
 
 /* ============================================================
    Слушатели
@@ -271,8 +282,7 @@ audio.addEventListener('loadedmetadata', () => {
 audio.addEventListener('timeupdate', () => {
   if (!Number.isFinite(audio.duration) || audio.duration === 0) return;
   els.tCur.textContent = fmt(audio.currentTime);
-  const pct = (audio.currentTime / audio.duration) * 100;
-  updateSeekFill(pct);
+  updateSeekFill((audio.currentTime / audio.duration) * 100);
 });
 
 audio.addEventListener('ended', playNext);
@@ -302,7 +312,6 @@ function paintMute() {
   els.btnMute.querySelector('.ico-mute').style.display = muted ? 'block' : 'none';
 }
 
-/* горячие клавиши */
 document.addEventListener('keydown', (e) => {
   const tag = document.activeElement?.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA') return;
@@ -323,7 +332,7 @@ async function init() {
   paintMute();
   updateSeekFill(0);
 
-  state.tracks = await detectTracks();
+  state.tracks = await loadTracks();
   renderTracks();
 }
 
